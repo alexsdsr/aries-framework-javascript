@@ -21,12 +21,15 @@
     "clean": "rimraf ./build",
     "compile": "tsc -p tsconfig.build.json",
     "prepublishOnly": "yarn run build",
-    "test": "jest"
+    "test": "jest",
+    "mattr-auth-url": "jest tests/mattr_auth_url.test.ts",
+    "mattr-issue-vc": "echo -n 'Authorization Code: ' && read -r auth_code && echo -n 'Code verifier: ' && read -r code_verifier && AUTHCODE=$auth_code CODEVERIF=$code_verifier jest tests/mattr_issue_vc.test.ts",
+    "mattr-demo": "yarn run mattr-auth-url && yarn run mattr-issue-vc"
   },
   "dependencies": {
     "@aries-framework/core": "0.4.0",
-    "@sphereon/oid4vci-client": "0.4.1-unstable.308",
-    "@sphereon/oid4vci-common": "0.4.1-unstable.308",
+    "@sphereon/oid4vci-client": "0.7.0",
+    "@sphereon/oid4vci-common": "0.7.0",
     "@stablelib/random": "^1.0.2"
   },
   "devDependencies": {
