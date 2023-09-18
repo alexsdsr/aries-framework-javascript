@@ -1,3 +1,22 @@
+- [Overview](#overview)
+- [VC issuance demo](#vc-issuance-demo)
+  - [OpenID user's credentials](#openid-users-credentials)
+  - [Prepare the code](#prepare-the-code)
+  - [Patch the `CredentialRequestClient.js` in `sphereon` library](#patch-the-credentialrequestclientjs-in-sphereon-library)
+  - [How to run the demo](#how-to-run-the-demo)
+- [Issues](#issues)
+  - [Credential Offer](#credential-offer)
+  - [Authorization URL](#authorization-url)
+    - [Request parameters generating issue](#request-parameters-generating-issue)
+    - [`scope` parameter value](#scope-parameter-value)
+  - [Credential Request](#credential-request)
+    - [`types` field of Credential Request](#types-field-of-credential-request)
+      - [`sphereon` issue](#sphereon-issue)
+      - [`Mattr` issue](#mattr-issue)
+    - [`proof` field of Credential Request](#proof-field-of-credential-request)
+  - [VC validation error](#vc-validation-error)
+
+
 # Overview
 
 The `mattr-demo` script is implemented to show current state of compatibility between `AFJ` (as a wallet) and `Mattr` (as a VC issuer). The `Authorization flow` is used to issue VC. The code is base on the [PR#1474](https://github.com/hyperledger/aries-framework-javascript/pull/1474).
@@ -56,7 +75,7 @@ TODO: make automation for it
 
 ## How to run the demo
 
-Demo of VCs issuance consists of two steps:
+Demo of VCs issuance consists of three steps:
 
 1. Authorization URL generating
 2. Authorization via browser (Google Chrome is recommended)
@@ -80,7 +99,9 @@ Copy `Auth URL` value and put it into Google Chrome ('console' tab of developer 
 Copy the full link from your browser and paste it into terminal. Then copy the `Code verifier` value printed on the first step and put it into terminal as well.
 After some time VC should be printed in terminal.
 
-# Credential Offer
+# Issues
+
+## Credential Offer
 
 
 According to the [OID4VCI protocol documentation](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters) the `grants` field is optional part of a credential offer. However the `sphereon` library doesn't support credential offers without the `grants` field. It returns the error message:
@@ -128,9 +149,9 @@ decoded:
 openid-credential-offer://?credential_offer={"credential_issuer":"https://john-john-stzkbp.vii.au01.mattr.global","credentials":["969e5a08-ac5c-4304-8345-958236eed60d"], "grants": {"authorization_code": {}}}
 ```
 
-# Authorization URL
+## Authorization URL
 
-## Request parameters generating issue
+### Request parameters generating issue
 
 According to the [OID4VCI protocol documentation](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-authorization-request) an authorization request must be a HTTP GET request containing set of GET-parameters. However the `sphereon v.0.7.0` library generates a set of request parameters in a json-encoded form in case `OID4VCI v.1.0.11`.
 See the `convertJsonToURI` function [here](https://github.com/Sphereon-Opensource/OID4VCI/blob/v0.7.0/packages/common/lib/functions/Encoding.ts):
@@ -185,15 +206,15 @@ https://john-john-stzkbp.vii.au01.mattr.global/core/v1/oauth/authorize?response_
 ```
 
 
-## `scope` parameter value
+### `scope` parameter value
 
 The `sphereon` library generates the `openidldp_vc:TestCourseCredential` value for the `scope` authorization request parameter. But this value is not accepted by `Mattr`. `Mattr` expects for the `ldp_vc:TestCourseCredential` value.
 In order to make the request acceptable by `Mattr` the value of `scope` changed as shown in the above code.
 
 
-# Credential Request
+## Credential Request
 
-## `types` field of Credential Request
+### `types` field of Credential Request
 
 According to the [OID4VCI protocol documentation](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request) a credential request must provide the `types` field as a part of json-encoded HTTP POST body. This field must be a json-encoded array of the credential types.
 There are two issue with it:
@@ -201,7 +222,7 @@ There are two issue with it:
 1. The `sphereon` library puts the list of credential ids instead of credential types as it defined in the documentation
 2. `Mattr` doesn't accept the `types` field
 
-### `sphereon` issue
+#### `sphereon` issue
 
 The `types` value must include a list of credential types (it is not well-defined in documentation) resolved from credential ids (provided in credential offer). But for some reason `sphereon` doesn't resolve credential ids into credential types under the hood.
 In order to make `sphereon` put credential types into `types` field of credential request the below code is changed in the `src/OpenId4VcClientService.ts` file:
@@ -215,7 +236,7 @@ const credentialResponse = await credentialRequestClient.acquireCredentialsUsing
 })
 ```
 
-### `Mattr` issue
+#### `Mattr` issue
 
 `Mattr` doesn't accept the `types` field. The error message is:
 
@@ -253,7 +274,7 @@ There are two changes:
 - the `proof` field is removed from request (see details below)
 
 
-## `proof` field of Credential Request
+### `proof` field of Credential Request
 
 For some reason `Mattr` doesn't accept a proof of possession provided by `sphereon` as a part of credential request.
 Mattr returns an error message:
@@ -264,7 +285,7 @@ Mattr returns an error message:
 
 This issue requires additional research. Since the `proof` is optional field it is removed from credential request for demo purposes (see the code above).
 
-# VC validation error
+## VC validation error
 
 Example of the VC issued by `Mattr`:
 
